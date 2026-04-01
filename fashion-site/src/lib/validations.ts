@@ -33,6 +33,16 @@ export const productSchema = z.object({
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   metadata: z.record(z.any()).optional(),
+  variants: z.array(z.object({
+    name: z.string(),
+    sku: z.string(),
+    price: z.number().positive(),
+    comparePrice: z.number().positive().optional(),
+    stock: z.number().int().min(0).default(0),
+    attributes: z.record(z.string()).default({}),
+    images: z.array(z.string().url()).default([]),
+    isActive: z.boolean().default(true),
+  })).optional(),
 });
 
 export const productVariantSchema = z.object({

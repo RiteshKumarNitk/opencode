@@ -1,50 +1,60 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { addressesApi, ordersApi, paymentsApi, cartApi } from '@/lib/api-client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { addressesApi, ordersApi, cartApi, couponsApi } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AddressForm from '@/components/AddressForm';
 
 export default function CheckoutPage() {
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+  const [couponMessage, setCouponMessage] = useState('');
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [showAddressForm, setShowAddressForm] = useState(false);
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const { data: cart } = useQuery({
+  const { data: cart, isLoading: cartLoading } = useQuery({
     queryKey: ['cart'],
     queryFn: () => cartApi.get(),
     enabled: isAuthenticated,
   });
 
-  const { data: addresses } = useQuery({
+  const { data: addresses, isLoading: addressesLoading } = useQuery({
     queryKey: ['addresses'],
     queryFn: () => addressesApi.list(),
     enabled: isAuthenticated,
+  });
+
+  const applyCouponMutation = useMutation({
+    mutationFn: (code: string) => couponsApi.apply(code),
+    onSuccess: () => {
+      setCouponApplied(true);
+      setCouponMessage('Coupon applied successfully!');
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+    },
+    onError: (err) => {
+      setCouponApplied(false);
+      setCouponMessage(err instanceof Error ? err.message : 'Invalid coupon code');
+    },
   });
 
   const createOrderMutation = useMutation({
     mutationFn: () =>
       ordersApi.create({
         addressId: selectedAddress!,
-        couponCode: couponCode || undefined,
+        couponCode: couponApplied ? couponCode || undefined : undefined,
         notes: notes || undefined,
         paymentMethod: 'RAZORPAY',
       }),
-    onSuccess: async (order) => {
-      try {
-        await paymentsApi.create({
-          orderId: order.id,
-          method: 'RAZORPAY',
-        });
-        router.push(`/orders/${order.id}`);
-      } catch (err) {
-        setError('Payment initialization failed');
-      }
+    onSuccess: (order) => {
+      router.push(`/payment/${order.id}`);
     },
     onError: (err) => {
       setError(err instanceof Error ? err.message : 'Order creation failed');
@@ -66,6 +76,19 @@ export default function CheckoutPage() {
   const items = cart?.items || [];
   const addressList = addresses || [];
 
+  if (cartLoading || addressesLoading) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+        <div className="animate-pulse space-y-4">
+          <div className="skeleton h-48 rounded-2xl" />
+          <div className="skeleton h-32 rounded-2xl" />
+          <div className="skeleton h-64 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
@@ -77,6 +100,12 @@ export default function CheckoutPage() {
       </div>
     );
   }
+
+  const handleAddressFormSuccess = (addressId?: string) => {
+    setShowAddressForm(false);
+    queryClient.invalidateQueries({ queryKey: ['addresses'] });
+    if (addressId) setSelectedAddress(addressId);
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -99,10 +128,16 @@ export default function CheckoutPage() {
               <span className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">1</span>
               Delivery Address
             </h2>
-            {addressList.length === 0 ? (
+
+            {addressList.length === 0 && !showAddressForm ? (
               <div className="text-center py-8 bg-gray-50 rounded-xl">
                 <p className="text-gray-500 mb-3">No addresses saved</p>
-                <Link href="/profile" className="text-indigo-600 font-medium text-sm hover:underline">+ Add Address</Link>
+                <button
+                  onClick={() => setShowAddressForm(true)}
+                  className="text-indigo-600 font-medium text-sm hover:underline"
+                >
+                  + Add Address
+                </button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -128,7 +163,10 @@ export default function CheckoutPage() {
                         {selectedAddress === addr.id && <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />}
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{addr.fullName}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-gray-900">{addr.fullName}</p>
+                          <span className="text-[10px] font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">{addr.label || 'Home'}</span>
+                        </div>
                         <p className="text-sm text-gray-500 mt-0.5">
                           {addr.line1}{addr.line2 && `, ${addr.line2}`}, {addr.city}, {addr.state} {addr.postalCode}
                         </p>
@@ -137,6 +175,23 @@ export default function CheckoutPage() {
                     </div>
                   </label>
                 ))}
+
+                {showAddressForm ? (
+                  <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl bg-indigo-50/30">
+                    <p className="text-sm font-semibold text-gray-700 mb-3">Add New Address</p>
+                    <AddressForm
+                      onSuccess={() => handleAddressFormSuccess()}
+                      onCancel={() => setShowAddressForm(false)}
+                    />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowAddressForm(true)}
+                    className="w-full p-4 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/30 transition"
+                  >
+                    + Add New Address
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -152,13 +207,44 @@ export default function CheckoutPage() {
                 type="text"
                 placeholder="Enter coupon code"
                 value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  setCouponCode(e.target.value.toUpperCase());
+                  setCouponMessage('');
+                  setCouponApplied(false);
+                }}
                 className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
               />
-              <button className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-200 transition">
-                Apply
-              </button>
+              {couponApplied ? (
+                <button
+                  onClick={() => {
+                    setCouponApplied(false);
+                    setCouponCode('');
+                    setCouponMessage('');
+                    queryClient.invalidateQueries({ queryKey: ['cart'] });
+                  }}
+                  className="px-5 py-2.5 bg-red-50 text-red-600 rounded-xl font-medium text-sm hover:bg-red-100 transition"
+                >
+                  Remove
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (couponCode.trim()) {
+                      applyCouponMutation.mutate(couponCode.trim());
+                    }
+                  }}
+                  disabled={!couponCode.trim() || applyCouponMutation.isPending}
+                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium text-sm hover:bg-indigo-700 transition disabled:opacity-50"
+                >
+                  {applyCouponMutation.isPending ? 'Applying...' : 'Apply'}
+                </button>
+              )}
             </div>
+            {couponMessage && (
+              <p className={`text-sm mt-2 ${couponApplied ? 'text-green-600' : 'text-red-500'}`}>
+                {couponMessage}
+              </p>
+            )}
           </div>
 
           {/* Notes */}
@@ -234,6 +320,10 @@ export default function CheckoutPage() {
                 'Place Order & Pay'
               )}
             </button>
+
+            {!selectedAddress && addressList.length > 0 && (
+              <p className="text-center text-sm text-amber-600 mt-3">Please select a delivery address above</p>
+            )}
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getOrCreateCart, addToCart, applyCoupon, removeCoupon } from '@/modules/cart/service';
+import { getOrCreateCart, addToCart, applyCoupon, removeCoupon, mergeGuestCart } from '@/modules/cart/service';
 import { addToCartSchema } from '@/lib/validations';
 import { getUserFromRequest } from '@/lib/auth';
 import { successResponse, errorResponse, validationErrorResponse } from '@/lib/api-response';
@@ -11,6 +11,11 @@ export async function GET(req: NextRequest) {
 
     if (!user && !sessionId) {
       return errorResponse('Session ID required for guest cart', 400);
+    }
+
+    if (user?.userId && sessionId) {
+      const cart = await mergeGuestCart(sessionId, user.userId);
+      return successResponse(cart);
     }
 
     const cart = await getOrCreateCart(user?.userId, sessionId);

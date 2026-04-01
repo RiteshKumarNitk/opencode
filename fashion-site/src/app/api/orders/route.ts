@@ -25,13 +25,14 @@ export async function POST(req: NextRequest) {
     const user = await getUserFromRequest(req);
     if (!user) return errorResponse('Unauthorized', 401);
 
+    const sessionId = req.headers.get('x-session-id') ?? undefined;
     const body = await req.json();
     const parsed = createOrderSchema.safeParse(body);
     if (!parsed.success) {
       return validationErrorResponse(parsed.error.flatten().fieldErrors);
     }
 
-    const order = await createOrder(user.userId, parsed.data);
+    const order = await createOrder(user.userId, parsed.data, sessionId);
     return createdResponse(order);
   } catch (error) {
     if (error instanceof Error) {

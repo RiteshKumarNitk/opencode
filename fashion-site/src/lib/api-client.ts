@@ -78,11 +78,15 @@ async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<
 }
 
 export const authApi = {
-  register: (data: { email: string; password: string; firstName: string; lastName: string; phone?: string }) =>
-    apiFetch('/auth/register', { method: 'POST', body: data, auth: false }),
+  register: (data: { email: string; password: string; firstName: string; lastName: string; phone?: string }) => {
+    const sessionId = useCartStore.getState().getSessionId();
+    return apiFetch('/auth/register', { method: 'POST', body: { ...data, sessionId }, auth: false });
+  },
 
-  login: (data: { email: string; password: string }) =>
-    apiFetch('/auth/login', { method: 'POST', body: data, auth: false }),
+  login: (data: { email: string; password: string }) => {
+    const sessionId = useCartStore.getState().getSessionId();
+    return apiFetch('/auth/login', { method: 'POST', body: { ...data, sessionId }, auth: false });
+  },
 
   me: () => apiFetch('/auth/me'),
 };
@@ -143,6 +147,14 @@ export const paymentsApi = {
 
   verify: (data: { paymentId: string; method: string; gatewayPaymentId: string; gatewayOrderId: string; signature: string }) =>
     apiFetch('/payments/verify', { method: 'POST', body: data }),
+
+  demoVerify: (data: { orderId: string }) =>
+    apiFetch('/payments/demo-verify', { method: 'POST', body: data }),
+};
+
+export const couponsApi = {
+  apply: (code: string) => apiFetch('/coupons', { method: 'POST', body: { code } }),
+  remove: () => apiFetch('/coupons', { method: 'DELETE' }),
 };
 
 export const adminApi = {

@@ -1,12 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { addressesApi, authApi } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores';
 import Link from 'next/link';
+import AddressForm from '@/components/AddressForm';
 
 export default function ProfilePage() {
   const { isAuthenticated } = useAuthStore();
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const { data: user } = useQuery({
     queryKey: ['me'],
@@ -33,6 +37,12 @@ export default function ProfilePage() {
   }
 
   const addressList = addresses || [];
+  const editingAddress = editingId ? addressList.find((a: any) => a.id === editingId) : null;
+
+  const handleFormSuccess = () => {
+    setShowForm(false);
+    setEditingId(null);
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -72,27 +82,73 @@ export default function ProfilePage() {
             <h2 className="text-lg font-bold text-gray-900">Saved Addresses</h2>
             <span className="text-sm text-gray-400">{addressList.length} saved</span>
           </div>
-          {addressList.length === 0 ? (
+
+          {addressList.length === 0 && !showForm ? (
             <div className="text-center py-8 bg-gray-50 rounded-xl">
-              <p className="text-gray-400 text-sm">No addresses saved yet</p>
+              <p className="text-gray-400 text-sm mb-3">No addresses saved yet</p>
+              <button
+                onClick={() => setShowForm(true)}
+                className="text-indigo-600 font-medium text-sm hover:underline"
+              >
+                + Add Address
+              </button>
             </div>
           ) : (
             <div className="space-y-3">
               {addressList.map((addr: any) => (
                 <div key={addr.id} className="p-4 border border-gray-100 rounded-xl">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-semibold text-sm text-gray-900">{addr.fullName}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {addr.line1}, {addr.city}, {addr.state} {addr.postalCode}
-                      </p>
+                  {editingId === addr.id ? (
+                    <AddressForm
+                      initialData={addr}
+                      onSuccess={handleFormSuccess}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  ) : (
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">{addr.label || 'Home'}</span>
+                          {addr.isDefault && (
+                            <span className="px-2 py-0.5 rounded-lg bg-green-50 text-green-600 text-[10px] font-semibold">Default</span>
+                          )}
+                        </div>
+                        <p className="font-semibold text-sm text-gray-900">{addr.fullName}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {addr.line1}{addr.line2 && `, ${addr.line2}`}, {addr.city}, {addr.state} {addr.postalCode}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">{addr.phone}</p>
+                      </div>
+                      <button
+                        onClick={() => setEditingId(addr.id)}
+                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                        title="Edit address"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
                     </div>
-                    {addr.isDefault && (
-                      <span className="px-2 py-0.5 rounded-lg bg-green-50 text-green-600 text-[10px] font-semibold">Default</span>
-                    )}
-                  </div>
+                  )}
                 </div>
               ))}
+
+              {/* Add new address form or button */}
+              {showForm ? (
+                <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl bg-indigo-50/30">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Add New Address</p>
+                  <AddressForm
+                    onSuccess={handleFormSuccess}
+                    onCancel={() => setShowForm(false)}
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="w-full p-4 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/30 transition"
+                >
+                  + Add New Address
+                </button>
+              )}
             </div>
           )}
         </div>

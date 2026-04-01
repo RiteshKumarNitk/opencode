@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { loginUser } from '@/modules/auth/service';
 import { loginSchema } from '@/lib/validations';
 import { successResponse, errorResponse, validationErrorResponse, unauthorizedResponse } from '@/lib/api-response';
+import { mergeGuestCart } from '@/modules/cart/service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +14,11 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await loginUser(parsed.data);
+
+    if (body.sessionId) {
+      await mergeGuestCart(body.sessionId, result.user.id);
+    }
+
     return successResponse(result);
   } catch (error) {
     if (error instanceof Error && error.message === 'INVALID_CREDENTIALS') {

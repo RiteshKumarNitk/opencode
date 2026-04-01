@@ -227,8 +227,11 @@ model Order {
   metadata        Json?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
-  cancelledAt     DateTime?
+  confirmedAt     DateTime?
+  processingAt    DateTime?
+  shippedAt       DateTime?
   deliveredAt     DateTime?
+  cancelledAt     DateTime?
   deletedAt       DateTime?
 
   userId          String

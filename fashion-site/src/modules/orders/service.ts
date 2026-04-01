@@ -1,19 +1,25 @@
 import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '@/lib/prisma';
 import { generateOrderNumber } from '@/lib/slug';
+import { mergeGuestCart } from '@/modules/cart/service';
 import type { CreateOrderInput, UpdateOrderStatusInput } from '@/lib/validations';
 
 // ─── Create Order ─────────────────────────────────────────────
 
 export async function createOrder(
   userId: string,
-  input: CreateOrderInput
+  input: CreateOrderInput,
+  sessionId?: string
 ) {
   const address = await prisma.address.findFirst({
     where: { id: input.addressId, userId, deletedAt: null },
   });
 
   if (!address) throw new Error('ADDRESS_NOT_FOUND');
+
+  if (sessionId) {
+    await mergeGuestCart(sessionId, userId);
+  }
 
   const cart = await prisma.cart.findFirst({
     where: { userId },
@@ -207,6 +213,18 @@ export async function updateOrderStatus(
 
   return prisma.$transaction(async (tx) => {
     const updateData: any = { status: input.status };
+
+    if (input.status === 'CONFIRMED') {
+      updateData.confirmedAt = new Date();
+    }
+
+    if (input.status === 'PROCESSING') {
+      updateData.processingAt = new Date();
+    }
+
+    if (input.status === 'SHIPPED') {
+      updateData.shippedAt = new Date();
+    }
 
     if (input.status === 'DELIVERED') {
       updateData.deliveredAt = new Date();
