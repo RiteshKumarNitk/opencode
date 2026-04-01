@@ -1,0 +1,23 @@
+# Prisma
+*.db-journal
+*.sqlite
+
+# Env
+.env
+.env.local
+.env.production
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
