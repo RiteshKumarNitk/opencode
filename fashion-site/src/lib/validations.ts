@@ -26,7 +26,7 @@ export const productSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   description: z.string().min(1, 'Description is required'),
   shortDesc: z.string().max(500).optional(),
-  price: z.number().positive('Price must be positive'),
+  price: z.number().min(0, 'Price must be non-negative'),
   comparePrice: z.number().positive().optional(),
   categoryId: z.string().optional(),
   images: z.array(z.string().url()).default([]),
@@ -36,7 +36,7 @@ export const productSchema = z.object({
   variants: z.array(z.object({
     name: z.string(),
     sku: z.string(),
-    price: z.number().positive(),
+    price: z.number().min(0),
     comparePrice: z.number().positive().optional(),
     stock: z.number().int().min(0).default(0),
     attributes: z.record(z.string()).default({}),

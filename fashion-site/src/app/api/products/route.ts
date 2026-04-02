@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     if (user.role !== 'ADMIN') return forbiddenResponse('Admin access required');
 
     const body = await req.json();
-    const parsed = productSchema.safeParse(body);
+    const parsed = productSchema.partial().safeParse(body);
     if (!parsed.success) {
       return validationErrorResponse(parsed.error.flatten().fieldErrors);
     }
@@ -51,6 +51,9 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error) {
       if (error.message === 'SLUG_EXISTS') return errorResponse('A product with this name already exists', 409);
       if (error.message === 'CATEGORY_NOT_FOUND') return errorResponse('Category not found', 404);
+      if (error.message === 'NAME_REQUIRED') return validationErrorResponse({ name: ['Product name is required'] });
+      if (error.message === 'DESCRIPTION_REQUIRED') return validationErrorResponse({ description: ['Description is required'] });
+      if (error.message === 'PRICE_REQUIRED') return validationErrorResponse({ price: ['Price is required'] });
     }
     console.error('Create product error:', error);
     return errorResponse('Failed to create product', 500);

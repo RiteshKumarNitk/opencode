@@ -71,7 +71,14 @@ async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || `Request failed with status ${response.status}`);
+    let message = data.error || `Request failed with status ${response.status}`;
+    if (data.details) {
+      const detailMessages = Object.entries(data.details)
+        .map(([field, errors]) => `${field}: ${(errors as string[]).join(', ')}`)
+        .join('; ');
+      if (detailMessages) message += ` - ${detailMessages}`;
+    }
+    throw new Error(message);
   }
 
   return data.data ?? data;

@@ -142,22 +142,35 @@ export default function ProductForm({ productId, onSaved, onCancel }: ProductFor
     setError('');
 
     try {
-      const payload = {
+      const basePrice = Number(form.price) || 0;
+      const validImages = form.images.filter(img => {
+        try { new URL(img); return true; } catch { return false; }
+      });
+      const payload: any = {
         name: form.name,
         description: form.description,
         shortDesc: form.shortDesc || undefined,
-        price: Number(form.price),
+        price: basePrice,
         comparePrice: form.comparePrice ? Number(form.comparePrice) : undefined,
         categoryId: form.categoryId || undefined,
         isActive: form.isActive,
         isFeatured: form.isFeatured,
-        images: form.images,
-        variants: variants.map(v => ({
-          ...v,
-          price: v.price || Number(form.price),
-          sku: v.sku || `${form.name.substring(0, 3).toUpperCase()}-${v.name}-${Date.now()}`,
-        })),
+        images: validImages,
       };
+
+      if (variants.length > 0 && variants.some(v => v.name)) {
+        payload.variants = variants
+          .filter(v => v.name)
+          .map(v => ({
+            name: v.name,
+            sku: v.sku || `${form.name.substring(0, 3).toUpperCase()}-${v.name}-${Date.now()}`,
+            price: v.price > 0 ? v.price : basePrice,
+            stock: v.stock || 0,
+            attributes: v.attributes || {},
+            images: [],
+            isActive: true,
+          }));
+      }
 
       if (isEdit) {
         await productsApi.update(productId, payload);
@@ -167,20 +180,26 @@ export default function ProductForm({ productId, onSaved, onCancel }: ProductFor
 
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      const message = err instanceof Error ? err.message : 'Failed to save';
+      setError(message);
     } finally {
       setSaving(false);
     }
   };
 
   const flatCategories: any[] = [];
+  const seenIds = new Set<string>();
   const flattenCats = (cats: any[], prefix = '') => {
+    if (!Array.isArray(cats)) return;
     for (const c of cats) {
-      flatCategories.push({ ...c, label: prefix + c.name });
-      if (c.children) flattenCats(c.children, prefix + '  ');
+      if (c && c.id && !seenIds.has(c.id)) {
+        seenIds.add(c.id);
+        flatCategories.push({ ...c, label: prefix + c.name });
+      }
+      if (c?.children) flattenCats(c.children, prefix + '  ');
     }
   };
-  if (categories) flattenCats(categories);
+  if (categories) flattenCats(Array.isArray(categories) ? categories : categories.data || categories.categories || []);
 
   return (
     <form onSubmit={handleSubmit}>
@@ -324,8 +343,8 @@ export default function ProductForm({ productId, onSaved, onCancel }: ProductFor
                 <select value={form.categoryId} onChange={(e) => setForm(f => ({ ...f, categoryId: e.target.value }))}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white">
                   <option value="">Select category</option>
-                  {flatCategories.map((c: any) => (
-                    <option key={c.id} value={c.id}>{c.label}</option>
+                  {flatCategories.map((c: any, idx: number) => (
+                    <option key={`${c.id}-${idx}`} value={c.id}>{c.label}</option>
                   ))}
                 </select>
               </div>

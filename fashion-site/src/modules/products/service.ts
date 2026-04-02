@@ -68,7 +68,11 @@ export async function getProduct(productIdOrSlug: string) {
 
 // ─── Create Product ───────────────────────────────────────────
 
-export async function createProduct(input: ProductInput) {
+export async function createProduct(input: any) {
+  if (!input.name) throw new Error('NAME_REQUIRED');
+  if (!input.description) throw new Error('DESCRIPTION_REQUIRED');
+  if (input.price === undefined || input.price === null) throw new Error('PRICE_REQUIRED');
+
   const slug = slugify(input.name);
 
   const existingSlug = await prisma.product.findFirst({
@@ -88,14 +92,14 @@ export async function createProduct(input: ProductInput) {
       name: input.name,
       slug,
       description: input.description,
-      shortDesc: input.shortDesc,
-      images: input.images || [],
+      shortDesc: input.shortDesc || null,
+      images: Array.isArray(input.images) ? input.images : [],
       price: input.price,
-      comparePrice: input.comparePrice,
+      comparePrice: input.comparePrice || null,
       sku: input.sku || generateSKU(input.name),
       isActive: input.isActive ?? true,
       isFeatured: input.isFeatured ?? false,
-      categoryId: input.categoryId,
+      categoryId: input.categoryId || null,
     },
     include: {
       category: { select: { id: true, name: true, slug: true } },
@@ -103,15 +107,15 @@ export async function createProduct(input: ProductInput) {
     },
   });
 
-  if (input.variants && input.variants.length > 0) {
+  if (input.variants && Array.isArray(input.variants) && input.variants.length > 0) {
     for (const variant of input.variants) {
       await prisma.productVariant.create({
         data: {
           productId: product.id,
           name: variant.name,
           sku: variant.sku || generateSKU(`${input.name}-${variant.name}`),
-          price: variant.price,
-          comparePrice: variant.comparePrice,
+          price: variant.price || 0,
+          comparePrice: variant.comparePrice || null,
           stock: variant.stock || 0,
           attributes: variant.attributes || {},
           images: variant.images || [],
