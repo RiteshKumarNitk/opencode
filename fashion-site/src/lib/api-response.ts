@@ -37,10 +37,11 @@ export function noContentResponse() {
 // ─── Errors ───────────────────────────────────────────────────
 
 export function errorResponse(message: string, status = 400, details?: unknown) {
-  return NextResponse.json(
-    { success: false, error: message, ...(details && { details }) },
-    { status }
-  );
+  const responseBody: Record<string, unknown> = { success: false, error: message };
+  if (details) {
+    responseBody.details = details;
+  }
+  return NextResponse.json(responseBody, { status });
 }
 
 export function unauthorizedResponse(message = 'Unauthorized') {

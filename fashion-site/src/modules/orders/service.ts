@@ -95,13 +95,13 @@ export async function createOrder(
         addressId: input.addressId,
         items: {
           create: cart.items.map((item) => ({
+            product: { connect: { id: item.productId } },
             productName: item.product.name,
-            sku: item.variant?.sku ?? null,
+            sku: item.variant?.sku ?? undefined,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             totalPrice: item.totalPrice,
-            attributes: item.variant?.attributes ?? null,
-            productId: item.productId,
+            attributes: item.variant?.attributes ?? undefined,
             variantId: item.variantId,
           })),
         },

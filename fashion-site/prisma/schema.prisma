@@ -21,9 +21,12 @@ enum OrderStatus {
   CONFIRMED
   PROCESSING
   SHIPPED
+  OUT_FOR_DELIVERY
   DELIVERED
   CANCELLED
   REFUNDED
+  RETURN_REQUESTED
+  RETURNED
 }
 
 enum PaymentStatus {
@@ -61,6 +64,10 @@ model User {
   cart          Cart?
   orders        Order[]
   addresses     Address[]
+  wishlistItems WishlistItem[]
+  reviews       Review[]
+  resetTokens   PasswordResetToken[]
+  socialAccounts SocialAccount[]
 
   @@index([email])
   @@index([role])
@@ -106,6 +113,7 @@ model Product {
   price         Decimal  @db.Decimal(10, 2)
   comparePrice  Decimal? @db.Decimal(10, 2)
   sku           String?
+  brand         String?
   isActive      Boolean  @default(true)
   isFeatured    Boolean  @default(false)
   sortOrder     Int      @default(0)
@@ -120,6 +128,8 @@ model Product {
   variants      ProductVariant[]
   orderItems    OrderItem[]
   cartItems     CartItem[]
+  wishlistItems WishlistItem[]
+  reviews       Review[]
 
   @@index([categoryId])
   @@index([isActive])
@@ -225,6 +235,8 @@ model Order {
   notes           String?      @db.Text
   couponCode      String?
   metadata        Json?
+  guestEmail      String?      // For guest checkout
+  guestPhone      String?      // For guest checkout
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   confirmedAt     DateTime?
@@ -234,18 +246,21 @@ model Order {
   cancelledAt     DateTime?
   deletedAt       DateTime?
 
-  userId          String
-  user            User         @relation(fields: [userId], references: [id])
+  userId          String?
+  user            User?        @relation(fields: [userId], references: [id])
 
   items           OrderItem[]
   payment         Payment?
   addressId       String
   address         Address      @relation(fields: [addressId], references: [id])
 
+  shipment        Shipment?
+
   @@index([userId])
   @@index([orderNumber])
   @@index([status])
   @@index([createdAt])
+  @@index([guestEmail])
   @@map("orders")
 }
 
@@ -355,4 +370,210 @@ model Coupon {
 
   @@index([code])
   @@map("coupons")
+}
+
+// ─────────────────────────────────────────────
+// WISHLIST
+// ─────────────────────────────────────────────
+
+model WishlistItem {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("wishlist_items")
+}
+
+// ─────────────────────────────────────────────
+// PRODUCT REVIEW
+// ─────────────────────────────────────────────
+
+model Review {
+  id            String   @id @default(cuid())
+  rating        Int
+  title         String?
+  comment       String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@index([userId])
+  @@map("reviews")
+}
+
+// ─────────────────────────────────────────────
+// PASSWORD RESET TOKEN
+// ─────────────────────────────────────────────
+
+model PasswordResetToken {
+  id            String   @id @default(cuid())
+  token         String   @unique
+  expiresAt     DateTime
+  used          Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ─────────────────────────────────────────────
+// SOCIAL LOGIN
+// ─────────────────────────────────────────────
+
+model SocialAccount {
+  id            String   @id @default(cuid())
+  provider      String   // "google", "facebook"
+  providerId    String
+  createdAt     DateTime @default(now())
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@map("social_accounts")
+}
+
+// ─────────────────────────────────────────────
+// NEWSLETTER SUBSCRIPTION
+// ─────────────────────────────────────────────
+
+model NewsletterSubscriber {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  isActive      Boolean  @default(true)
+  subscribedAt  DateTime @default(now())
+  unsubscribedAt DateTime?
+
+  @@index([email])
+  @@map("newsletter_subscribers")
+}
+
+// ─────────────────────────────────────────────
+// STOCK ALERT (Notify when available)
+// ─────────────────────────────────────────────
+
+model StockAlert {
+  id            String   @id @default(cuid())
+  email         String
+  isNotified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  notifiedAt    DateTime?
+
+  productId     String
+  variantId     String?
+
+  @@index([productId, variantId])
+  @@index([email])
+  @@map("stock_alerts")
+}
+
+// ─────────────────────────────────────────────
+// PRODUCT COMPARISON
+// ─────────────────────────────────────────────
+
+model ComparisonList {
+  id            String   @id @default(cuid())
+  sessionId     String?
+  userId        String?
+  productIds    String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([sessionId])
+  @@index([userId])
+  @@map("comparison_lists")
+}
+
+// ─────────────────────────────────────────────
+// SHIPPING TRACKING
+// ─────────────────────────────────────────────
+
+model Shipment {
+  id              String   @id @default(cuid())
+  trackingNumber  String?
+  carrier          String?  // "shiprocket", "delhivery", etc.
+  labelUrl        String?
+  currentStatus   String?
+  estimatedDelivery DateTime?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  orderId         String   @unique
+  order           Order    @relation(fields: [orderId], references: [id])
+
+  trackingEvents  ShipmentEvent[]
+
+  @@index([trackingNumber])
+  @@index([carrier])
+  @@map("shipments")
+}
+
+model ShipmentEvent {
+  id            String   @id @default(cuid())
+  status        String
+  location      String?
+  description   String?
+  timestamp     DateTime
+
+  shipmentId    String
+  shipment      Shipment @relation(fields: [shipmentId], references: [id])
+
+  @@index([shipmentId])
+  @@map("shipment_events")
+}
+
+// ─────────────────────────────────────────────
+// ANALYTICS
+// ─────────────────────────────────────────────
+
+model AnalyticsEvent {
+  id            String   @id @default(cuid())
+  eventType     String   // "page_view", "product_view", "add_to_cart", "purchase"
+  sessionId     String?
+  userId        String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  @@index([eventType])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("analytics_events")
+}
+
+// ─────────────────────────────────────────────
+// LANGUAGE
+// ─────────────────────────────────────────────
+
+model Translation {
+  id            String   @id @default(cuid())
+  locale        String   // "en", "hi", "es"
+  key           String
+  value         String   @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([locale, key])
+  @@index([locale])
+  @@map("translations")
 }

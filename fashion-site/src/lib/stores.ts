@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// ─── Cart Store ───────────────────────────────────────────────
-
 interface CartItem {
   id: string;
   productId: string;
@@ -69,8 +67,6 @@ export const useCartStore = create<CartState>()(
   )
 );
 
-// ─── Auth Store ───────────────────────────────────────────────
-
 interface User {
   id: string;
   email: string;
@@ -109,3 +105,66 @@ export const useAuthStore = create<AuthState>()(
     { name: 'auth-storage' }
   )
 );
+
+interface CompareState {
+  items: string[];
+  addItem: (id: string) => void;
+  removeItem: (id: string) => void;
+  clearAll: () => void;
+  isInCompare: (id: string) => boolean;
+}
+
+export const useCompareStore = create<CompareState>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      addItem: (id) =>
+        set((state) => {
+          if (state.items.length >= 4) return state;
+          if (state.items.includes(id)) return state;
+          return { items: [...state.items, id] };
+        }),
+      removeItem: (id) =>
+        set((state) => ({ items: state.items.filter((i) => i !== id) })),
+      clearAll: () => set({ items: [] }),
+      isInCompare: (id) => get().items.includes(id),
+    }),
+    { name: 'compare-storage' }
+  )
+);
+
+interface ChatMessage {
+  id: string;
+  text: string;
+  isUser: boolean;
+  timestamp: Date;
+}
+
+interface ChatState {
+  isOpen: boolean;
+  messages: ChatMessage[];
+  setOpen: (open: boolean) => void;
+  addMessage: (text: string, isUser: boolean) => void;
+  clearMessages: () => void;
+}
+
+export const useChatStore = create<ChatState>()((set) => ({
+  isOpen: false,
+  messages: [
+    { id: '1', text: 'Hello! How can I help you today?', isUser: false, timestamp: new Date() },
+  ],
+  setOpen: (isOpen) => set({ isOpen }),
+  addMessage: (text, isUser) =>
+    set((state) => ({
+      messages: [
+        ...state.messages,
+        { id: Date.now().toString(), text, isUser, timestamp: new Date() },
+      ],
+    })),
+  clearMessages: () =>
+    set({
+      messages: [
+        { id: '1', text: 'Hello! How can I help you today?', isUser: false, timestamp: new Date() },
+      ],
+    }),
+}));

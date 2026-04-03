@@ -27,7 +27,7 @@ export default function AdminOrdersPage() {
     },
   });
 
-  const orders = data?.data || data || [];
+  const orders = (data as any)?.data || data || [];
 
   const updateStatus = async (orderId: string, newStatus: string) => {
     try {

@@ -1,28 +1,57 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { addressesApi, authApi } from '@/lib/api-client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { addressesApi, authApi, profileApi } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores';
 import Link from 'next/link';
 import AddressForm from '@/components/AddressForm';
 
 export default function ProfilePage() {
   const { isAuthenticated } = useAuthStore();
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ firstName: '', lastName: '', phone: '' });
 
-  const { data: user } = useQuery({
+  const { data: userRaw } = useQuery({
     queryKey: ['me'],
     queryFn: () => authApi.me(),
     enabled: isAuthenticated,
   });
+
+  const user = userRaw as { firstName?: string; lastName?: string; phone?: string; email?: string; role?: string } | undefined;
 
   const { data: addresses } = useQuery({
     queryKey: ['addresses'],
     queryFn: () => addressesApi.list(),
     enabled: isAuthenticated,
   });
+
+  const addressList: any[] = (addresses as any[]) || [];
+
+  const updateProfileMutation = useMutation({
+    mutationFn: (data: { firstName: string; lastName: string; phone?: string }) => profileApi.update(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+      setEditingProfile(false);
+    },
+  });
+
+  const startEditProfile = () => {
+    setProfileForm({
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      phone: user?.phone || '',
+    });
+    setEditingProfile(true);
+  };
+
+  const handleProfileSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateProfileMutation.mutate(profileForm);
+  };
 
   if (!isAuthenticated) {
     return (
@@ -36,7 +65,6 @@ export default function ProfilePage() {
     );
   }
 
-  const addressList = addresses || [];
   const editingAddress = editingId ? addressList.find((a: any) => a.id === editingId) : null;
 
   const handleFormSuccess = () => {
@@ -51,29 +79,78 @@ export default function ProfilePage() {
       <div className="grid md:grid-cols-2 gap-6">
         {/* User Info */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">{user?.firstName?.[0]}{user?.lastName?.[0]}</span>
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
+                <span className="text-white text-2xl font-bold">{user?.firstName?.[0]}{user?.lastName?.[0]}</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">{user?.firstName} {user?.lastName}</h2>
+                <p className="text-sm text-gray-400">{user?.email}</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">{user?.firstName} {user?.lastName}</h2>
-              <p className="text-sm text-gray-400">{user?.email}</p>
-            </div>
+            {!editingProfile && (
+              <button onClick={startEditProfile} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit profile">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            )}
           </div>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-              </svg>
-              <span className="text-sm text-gray-600">{user?.email}</span>
+
+          {editingProfile ? (
+            <form onSubmit={handleProfileSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                  <input type="text" required value={profileForm.firstName} onChange={e => setProfileForm(f => ({ ...f, firstName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                  <input type="text" required value={profileForm.lastName} onChange={e => setProfileForm(f => ({ ...f, lastName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input type="tel" value={profileForm.phone} onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" placeholder="Enter phone number" />
+              </div>
+              {updateProfileMutation.isError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm">Failed to update profile</div>
+              )}
+              <div className="flex gap-3">
+                <button type="submit" disabled={updateProfileMutation.isPending}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold hover:shadow-lg transition disabled:opacity-50">
+                  {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button type="button" onClick={() => setEditingProfile(false)}
+                  className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                </svg>
+                <span className="text-sm text-gray-600">{user?.email}</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <span className="text-sm text-gray-600">{user?.phone || 'No phone added'}</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span className="text-sm text-gray-600 capitalize">{user?.role?.toLowerCase()}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <span className="text-sm text-gray-600 capitalize">{user?.role?.toLowerCase()}</span>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Addresses */}
@@ -155,9 +232,10 @@ export default function ProfilePage() {
       </div>
 
       {/* Quick Links */}
-      <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
           { href: '/orders', icon: '📦', label: 'My Orders', desc: 'Track & manage' },
+          { href: '/wishlist', icon: '❤️', label: 'Wishlist', desc: 'Saved items' },
           { href: '/cart', icon: '🛒', label: 'Cart', desc: 'View items' },
           { href: '/products', icon: '🛍️', label: 'Shop', desc: 'Browse products' },
           { href: '/', icon: '🏠', label: 'Home', desc: 'Back to home' },

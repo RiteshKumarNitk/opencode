@@ -18,9 +18,12 @@ export default function OrderDetailPage() {
     CONFIRMED: { bg: 'bg-blue-50', text: 'text-blue-700', icon: '✅', step: 1 },
     PROCESSING: { bg: 'bg-purple-50', text: 'text-purple-700', icon: '📦', step: 2 },
     SHIPPED: { bg: 'bg-indigo-50', text: 'text-indigo-700', icon: '🚚', step: 3 },
-    DELIVERED: { bg: 'bg-green-50', text: 'text-green-700', icon: '🎉', step: 4 },
+    OUT_FOR_DELIVERY: { bg: 'bg-cyan-50', text: 'text-cyan-700', icon: '🏃', step: 4 },
+    DELIVERED: { bg: 'bg-green-50', text: 'text-green-700', icon: '🎉', step: 5 },
     CANCELLED: { bg: 'bg-red-50', text: 'text-red-700', icon: '❌', step: -1 },
     REFUNDED: { bg: 'bg-gray-50', text: 'text-gray-700', icon: '💰', step: -1 },
+    RETURN_REQUESTED: { bg: 'bg-orange-50', text: 'text-orange-700', icon: '🔄', step: -1 },
+    RETURNED: { bg: 'bg-teal-50', text: 'text-teal-700', icon: '↩️', step: -1 },
   };
 
   const deliverySteps = [
@@ -28,6 +31,7 @@ export default function OrderDetailPage() {
     { label: 'Confirmed', icon: '✅', desc: 'Order confirmed by seller' },
     { label: 'Processing', icon: '📦', desc: 'Being prepared for shipping' },
     { label: 'Shipped', icon: '🚚', desc: 'On the way to you' },
+    { label: 'Out for Delivery', icon: '🏃', desc: 'Out for delivery' },
     { label: 'Delivered', icon: '🎉', desc: 'Delivered to your address' },
   ];
 
@@ -56,7 +60,21 @@ export default function OrderDetailPage() {
     );
   }
 
-  const status = statusConfig[order.status] || statusConfig.PENDING;
+  const orderData = order as { 
+    orderNumber?: string; 
+    createdAt?: string; 
+    status?: string; 
+    shipment?: any;
+    items?: any[];
+    subtotal?: number;
+    discount?: number;
+    tax?: number;
+    totalAmount?: number;
+    address?: any;
+    payment?: any;
+  };
+  const orderStatus = orderData.status || 'PENDING';
+  const status = statusConfig[orderStatus] || statusConfig.PENDING;
   const currentStep = status.step;
 
   return (
@@ -69,13 +87,13 @@ export default function OrderDetailPage() {
           </svg>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{order.orderNumber}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{orderData.orderNumber}</h1>
           <p className="text-sm text-gray-400">
-            Placed on {new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
+            Placed on {new Date(orderData.createdAt || '').toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
         <span className={`ml-auto px-4 py-2 rounded-xl text-sm font-semibold ${status.bg} ${status.text} flex items-center gap-1.5`}>
-          {status.icon} {order.status}
+          {status.icon} {orderStatus}
         </span>
       </div>
 
@@ -88,7 +106,7 @@ export default function OrderDetailPage() {
             <div className="absolute top-6 left-6 right-6 h-1 bg-gray-100 rounded-full hidden md:block">
               <div
                 className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-700"
-                style={{ width: `${(currentStep / 4) * 100}%` }}
+                style={{ width: `${(currentStep / 5) * 100}%` }}
               />
             </div>
 
@@ -115,15 +133,56 @@ export default function OrderDetailPage() {
               })}
             </div>
           </div>
+
+          {/* Shipment Tracking Info */}
+          {orderData.shipment && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <h3 className="font-semibold text-gray-900 mb-3">Shipment Tracking</h3>
+              <div className="flex flex-wrap gap-4 text-sm">
+                {orderData.shipment.trackingNumber && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Tracking ID:</span>
+                    <span className="font-mono font-medium">{orderData.shipment.trackingNumber}</span>
+                  </div>
+                )}
+                {orderData.shipment.carrier && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Carrier:</span>
+                    <span className="font-medium capitalize">{orderData.shipment.carrier}</span>
+                  </div>
+                )}
+                {orderData.shipment.estimatedDelivery && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Est. Delivery:</span>
+                    <span className="font-medium">{new Date(orderData.shipment.estimatedDelivery).toLocaleDateString('en-IN')}</span>
+                  </div>
+                )}
+              </div>
+              {orderData.shipment.trackingEvents?.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {orderData.shipment.trackingEvents.slice(0, 3).map((event: any, idx: number) => (
+                    <div key={idx} className="flex gap-3 text-sm">
+                      <div className="w-2 h-2 mt-1.5 rounded-full bg-indigo-500 flex-shrink-0" />
+                      <div>
+                        <p className="text-gray-800">{event.status}</p>
+                        {event.location && <p className="text-gray-400 text-xs">{event.location}</p>}
+                        <p className="text-gray-300 text-xs">{new Date(event.timestamp).toLocaleString('en-IN')}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Items */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Items ({order.items?.length})</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Items ({orderData.items?.length})</h2>
           <div className="space-y-4">
-            {order.items?.map((item: any) => (
+            {orderData.items?.map((item: any) => (
               <div key={item.id} className="flex gap-4">
                 <div className="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
                   {item.product?.images?.[0] && (
@@ -153,27 +212,27 @@ export default function OrderDetailPage() {
             <div className="space-y-2.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Subtotal</span>
-                <span className="font-medium">₹{Number(order.subtotal).toLocaleString()}</span>
+                <span className="font-medium">₹{Number(orderData.subtotal).toLocaleString()}</span>
               </div>
-              {order.discount > 0 && (
+              {(orderData.discount || 0) > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Discount</span>
-                  <span className="font-medium">-₹{Number(order.discount).toLocaleString()}</span>
+                  <span className="font-medium">-₹{Number(orderData.discount).toLocaleString()}</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span className="text-gray-500">Tax (GST)</span>
-                <span className="font-medium">₹{Number(order.tax).toLocaleString()}</span>
+                <span className="font-medium">₹{Number(orderData.tax).toLocaleString()}</span>
               </div>
               <div className="border-t border-gray-100 pt-2.5 flex justify-between font-bold text-base">
                 <span>Total</span>
-                <span>₹{Number(order.totalAmount).toLocaleString()}</span>
+                <span>₹{Number(orderData.totalAmount).toLocaleString()}</span>
               </div>
             </div>
           </div>
 
           {/* Delivery Address */}
-          {order.address && (
+          {orderData.address && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-3">Delivery Address</h2>
               <div className="flex items-start gap-3">
@@ -184,35 +243,35 @@ export default function OrderDetailPage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">{order.address.fullName}</p>
+                  <p className="font-semibold text-gray-900">{orderData.address.fullName}</p>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    {order.address.line1}{order.address.line2 && `, ${order.address.line2}`}<br />
-                    {order.address.city}, {order.address.state} {order.address.postalCode}
+                    {orderData.address.line1}{orderData.address.line2 && `, ${orderData.address.line2}`}<br />
+                    {orderData.address.city}, {orderData.address.state} {orderData.address.postalCode}
                   </p>
-                  <p className="text-sm text-gray-400 mt-1">{order.address.phone}</p>
+                  <p className="text-sm text-gray-400 mt-1">{orderData.address.phone}</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* Payment */}
-          {order.payment && (
+          {orderData.payment && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-3">Payment</h2>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Method</span>
-                  <span className="font-medium">{order.payment.method}</span>
+                  <span className="font-medium">{orderData.payment.method}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Status</span>
-                  <span className={`font-semibold ${order.payment.status === 'COMPLETED' ? 'text-green-600' : 'text-amber-600'}`}>
-                    {order.payment.status}
+                  <span className={`font-semibold ${orderData.payment.status === 'COMPLETED' ? 'text-green-600' : 'text-amber-600'}`}>
+                    {orderData.payment.status}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Amount</span>
-                  <span className="font-medium">₹{Number(order.payment.amount).toLocaleString()}</span>
+                  <span className="font-medium">₹{Number(orderData.payment.amount).toLocaleString()}</span>
                 </div>
               </div>
             </div>

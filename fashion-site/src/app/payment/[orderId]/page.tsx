@@ -23,11 +23,21 @@ export default function PaymentPage() {
 
   const orderId = params.orderId as string;
 
-  const { data: order, isLoading } = useQuery({
+  const { data: orderRaw, isLoading } = useQuery({
     queryKey: ['order', orderId],
     queryFn: () => ordersApi.get(orderId),
     enabled: isAuthenticated && !!orderId,
   });
+
+  const order = orderRaw as { 
+    orderNumber?: string; 
+    status?: string;
+    totalAmount?: number;
+    discount?: number;
+    items?: any[];
+    address?: { fullName?: string; phone?: string; line1?: string; line2?: string; city?: string; state?: string; postalCode?: string }; 
+    payment?: { status?: string };
+  } | undefined;
 
   const initPaymentMutation = useMutation({
     mutationFn: () => paymentsApi.create({ orderId, method: 'RAZORPAY' }),
@@ -336,7 +346,7 @@ export default function PaymentPage() {
                 <span className="text-gray-500">Subtotal</span>
                 <span>₹{totalAmount.toLocaleString()}</span>
               </div>
-              {order.discount > 0 && (
+              {(order.discount || 0) > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Discount</span>
                   <span>-₹{Number(order.discount).toLocaleString()}</span>

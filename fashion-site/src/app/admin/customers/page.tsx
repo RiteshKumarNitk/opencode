@@ -9,7 +9,7 @@ export default function AdminCustomersPage() {
     queryFn: () => adminApi.users({ limit: '50' }),
   });
 
-  const customers = data?.data || data || [];
+  const customers = (data as any)?.data || data || [];
 
   return (
     <div>

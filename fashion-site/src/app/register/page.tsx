@@ -29,8 +29,8 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const result = await authApi.register(form);
-      setAuth(result.user, result.accessToken, result.refreshToken);
+      const result = await authApi.register(form) as { user?: any; accessToken?: string; refreshToken?: string };
+      setAuth(result.user, result.accessToken || '', result.refreshToken || '');
       router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');

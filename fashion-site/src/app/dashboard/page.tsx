@@ -38,8 +38,9 @@ export default function DashboardPage() {
     );
   }
 
-  const orders = ordersData?.data || ordersData || [];
-  const cartItems = cart?.items || [];
+  const meData = me as any;
+  const orders = (ordersData as any)?.data || ordersData || [];
+  const cartItems = (cart as any)?.items || [];
 
   const totalOrders = orders.length;
   const totalSpent = orders.reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0);
@@ -59,15 +60,15 @@ export default function DashboardPage() {
     REFUNDED: { bg: 'bg-gray-50', text: 'text-gray-700', icon: '💰' },
   };
 
+  const userName = meData?.firstName || user?.firstName || 'User';
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Welcome Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back, {me?.firstName || user?.firstName}!</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Welcome back, {userName}!</h1>
         <p className="text-gray-500 mt-1">Here&apos;s your account overview</p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <div className="flex items-center gap-3 mb-3">
@@ -118,73 +119,59 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Order Status Breakdown */}
       <div className="grid md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-xl">🎉</div>
           <div>
-            <p className="text-xl font-bold text-gray-900">{deliveredOrders}</p>
+            <p className="text-2xl font-bold text-gray-900">{deliveredOrders}</p>
             <p className="text-xs text-gray-400">Delivered</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-xl">⏳</div>
-          <div>
-            <p className="text-xl font-bold text-gray-900">{pendingOrders}</p>
-            <p className="text-xs text-gray-400">Pending / Active</p>
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center text-xl">❌</div>
           <div>
-            <p className="text-xl font-bold text-gray-900">{cancelledOrders}</p>
+            <p className="text-2xl font-bold text-gray-900">{cancelledOrders}</p>
             <p className="text-xs text-gray-400">Cancelled</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-xl">🔄</div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900">{pendingOrders}</p>
+            <p className="text-xs text-gray-400">In Transit</p>
           </div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Recent Orders */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-gray-900">Recent Orders</h2>
-            <Link href="/orders" className="text-sm text-indigo-600 font-medium hover:underline">View All →</Link>
+            <Link href="/orders" className="text-sm text-indigo-600 font-medium">View All</Link>
           </div>
+
           {recentOrders.length === 0 ? (
-            <div className="text-center py-10 bg-gray-50 rounded-xl">
-              <p className="text-gray-400 text-sm mb-3">No orders yet</p>
-              <Link href="/products" className="text-indigo-600 font-medium text-sm hover:underline">
-                Start Shopping
-              </Link>
+            <div className="text-center py-12">
+              <p className="text-4xl mb-3">📦</p>
+              <p className="text-gray-500">No orders yet</p>
+              <Link href="/products" className="text-indigo-600 font-medium text-sm mt-2 inline-block">Start Shopping</Link>
             </div>
           ) : (
             <div className="space-y-3">
               {recentOrders.map((order: any) => {
                 const status = statusConfig[order.status] || statusConfig.PENDING;
                 return (
-                  <Link
-                    key={order.id}
-                    href={`/orders/${order.id}`}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition group"
-                  >
+                  <Link key={order.id} href={`/orders/${order.id}`} className="flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm ${status.bg}`}>
-                        {status.icon}
-                      </div>
+                      <span className="text-xl">{status.icon}</span>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition">
-                          {order.orderNumber}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                        </p>
+                        <p className="font-semibold text-gray-900 text-sm">{order.orderNumber}</p>
+                        <p className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString('en-IN')}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-900">₹{Number(order.totalAmount).toLocaleString()}</p>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${status.bg} ${status.text}`}>
-                        {order.status}
-                      </span>
+                      <p className="font-semibold text-gray-900">₹{Number(order.totalAmount).toLocaleString()}</p>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${status.bg} ${status.text}`}>{order.status}</span>
                     </div>
                   </Link>
                 );
@@ -193,62 +180,39 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-gray-100 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <Link href="/products" className="flex items-center gap-3 p-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition group">
-                <span className="text-xl">🛍️</span>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Browse Products</p>
-                  <p className="text-[10px] text-gray-400">Explore new arrivals</p>
-                </div>
-              </Link>
-              <Link href="/cart" className="flex items-center gap-3 p-3 rounded-xl bg-purple-50 hover:bg-purple-100 transition group">
-                <span className="text-xl">🛒</span>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">View Cart</p>
-                  <p className="text-[10px] text-gray-400">{cartItems.length} items</p>
-                </div>
-              </Link>
-              <Link href="/orders" className="flex items-center gap-3 p-3 rounded-xl bg-green-50 hover:bg-green-100 transition group">
-                <span className="text-xl">📦</span>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">My Orders</p>
-                  <p className="text-[10px] text-gray-400">Track your orders</p>
-                </div>
-              </Link>
-              <Link href="/profile" className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 hover:bg-amber-100 transition group">
-                <span className="text-xl">👤</span>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">My Profile</p>
-                  <p className="text-[10px] text-gray-400">Manage addresses</p>
-                </div>
-              </Link>
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Account Info</h2>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm font-bold">{userName[0]}</span>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
+                <p className="text-xs text-gray-400 truncate">{meData?.email || user?.email}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+              <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span className="text-sm text-gray-600 capitalize">{user?.role?.toLowerCase() || 'customer'} account</span>
             </div>
           </div>
 
-          {/* Account Info */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Account</h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-sm font-bold">{(me?.firstName || user?.firstName)?.[0]}{(me?.lastName || user?.lastName)?.[0]}</span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{me?.firstName || user?.firstName} {me?.lastName || user?.lastName}</p>
-                  <p className="text-xs text-gray-400 truncate">{me?.email || user?.email}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span className="text-sm text-gray-600 capitalize">{(me?.role || user?.role)?.toLowerCase()} account</span>
-              </div>
-            </div>
+          <div className="mt-4 space-y-2">
+            <Link href="/orders" className="block w-full text-left px-4 py-2.5 rounded-xl bg-gray-50 text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+              📦 My Orders
+            </Link>
+            <Link href="/wishlist" className="block w-full text-left px-4 py-2.5 rounded-xl bg-gray-50 text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+              ❤️ Wishlist
+            </Link>
+            <Link href="/profile" className="block w-full text-left px-4 py-2.5 rounded-xl bg-gray-50 text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+              👤 Edit Profile
+            </Link>
+            <Link href="/cart" className="block w-full text-left px-4 py-2.5 rounded-xl bg-gray-50 text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+              🛒 My Cart
+            </Link>
           </div>
         </div>
       </div>

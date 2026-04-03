@@ -27,13 +27,21 @@ export async function comparePassword(password: string, hash: string): Promise<b
 export function generateToken(payload: JwtPayload): string {
   return jwt.sign(payload, process.env.JWT_SECRET!, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+  } as jwt.SignOptions);
 }
 
 export function generateRefreshToken(payload: JwtPayload): string {
   return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET!, {
     expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d',
-  });
+  } as jwt.SignOptions);
+}
+
+export function generateTokens(user: { id: string; email: string; role: string }) {
+  const payload = { userId: user.id, email: user.email, role: user.role as 'ADMIN' | 'CUSTOMER' };
+  return {
+    accessToken: generateToken(payload),
+    refreshToken: generateRefreshToken(payload),
+  };
 }
 
 export function verifyToken(token: string): JwtPayload | null {

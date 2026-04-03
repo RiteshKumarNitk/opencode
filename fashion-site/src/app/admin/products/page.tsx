@@ -19,7 +19,7 @@ export default function AdminProductsPage() {
     },
   });
 
-  const products = data?.data || data || [];
+  const products = (data as any)?.data || data || [];
 
   const handleEdit = (id: string) => {
     setEditId(id);

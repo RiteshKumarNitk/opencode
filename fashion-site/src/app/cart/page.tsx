@@ -10,7 +10,7 @@ export default function CartPage() {
     queryFn: () => cartApi.get(),
   });
 
-  const items = cart?.items || [];
+  const items = (cart as any)?.items || [];
 
   const handleUpdateQuantity = async (itemId: string, quantity: number) => {
     try {
@@ -141,12 +141,12 @@ export default function CartPage() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Subtotal</span>
-                  <span className="font-medium">₹{Number(cart?.totalAmount || 0).toLocaleString()}</span>
+                  <span className="font-medium">₹{Number((cart as any)?.totalAmount || 0).toLocaleString()}</span>
                 </div>
-                {cart?.discount > 0 && (
+                {(cart as any)?.discount > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Discount</span>
-                    <span className="font-medium">-₹{Number(cart.discount).toLocaleString()}</span>
+                    <span className="font-medium">-₹{Number((cart as any).discount).toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
@@ -155,7 +155,7 @@ export default function CartPage() {
                 </div>
                 <div className="border-t pt-3 flex justify-between">
                   <span className="font-bold text-gray-900">Total</span>
-                  <span className="font-bold text-xl text-gray-900">₹{Number(cart?.totalAmount || 0).toLocaleString()}</span>
+                  <span className="font-bold text-xl text-gray-900">₹{Number((cart as any)?.totalAmount || 0).toLocaleString()}</span>
                 </div>
               </div>
               <Link

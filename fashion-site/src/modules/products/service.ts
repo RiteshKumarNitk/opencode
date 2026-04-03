@@ -22,6 +22,25 @@ export async function listProducts(filters: ProductFilterInput) {
     if (filters.minPrice !== undefined) where.price.gte = filters.minPrice;
     if (filters.maxPrice !== undefined) where.price.lte = filters.maxPrice;
   }
+  if (filters.brand) {
+    where.brand = { equals: filters.brand, mode: 'insensitive' };
+  }
+
+  if (filters.size || filters.color) {
+    where.variants = {
+      some: {
+        deletedAt: null,
+        ...(filters.size && { attributes: { path: ['size'], equals: filters.size } }),
+        ...(filters.color && { attributes: { path: ['color'], equals: filters.color } }),
+      },
+    };
+  }
+
+  const sortMapping: Record<string, { [key: string]: string }> = {
+    createdAt: { createdAt: filters.sortOrder || 'desc' },
+    price: { price: filters.sortOrder || 'desc' },
+    orderCount: { orderItems: filters.sortOrder || 'desc' },
+  };
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({
@@ -36,9 +55,9 @@ export async function listProducts(filters: ProductFilterInput) {
             images: true, isActive: true,
           },
         },
-        _count: { select: { variants: true } },
+        _count: { select: { variants: true, orderItems: true } },
       },
-      orderBy: { [filters.sortBy || 'createdAt']: filters.sortOrder || 'desc' },
+      orderBy: sortMapping[filters.sortBy || 'createdAt'] || { createdAt: 'desc' },
       skip: ((filters.page || 1) - 1) * (filters.limit || 20),
       take: filters.limit || 20,
     }),
@@ -96,7 +115,7 @@ export async function createProduct(input: any) {
       images: Array.isArray(input.images) ? input.images : [],
       price: input.price,
       comparePrice: input.comparePrice || null,
-      sku: input.sku || generateSKU(input.name),
+      sku: input.sku || generateSKU('PRD', input.name),
       isActive: input.isActive ?? true,
       isFeatured: input.isFeatured ?? false,
       categoryId: input.categoryId || null,
@@ -113,7 +132,7 @@ export async function createProduct(input: any) {
         data: {
           productId: product.id,
           name: variant.name,
-          sku: variant.sku || generateSKU(`${input.name}-${variant.name}`),
+          sku: variant.sku || generateSKU('VAR', `${input.name}-${variant.name}`),
           price: variant.price || 0,
           comparePrice: variant.comparePrice || null,
           stock: variant.stock || 0,
@@ -196,7 +215,7 @@ export async function createVariant(productId: string, input: ProductVariantInpu
     data: {
       productId,
       name: input.name,
-      sku: input.sku || generateSKU(`${product.name}-${input.name}`),
+      sku: input.sku || generateSKU('VAR', `${product.name}-${input.name}`),
       price: input.price,
       comparePrice: input.comparePrice,
       stock: input.stock || 0,

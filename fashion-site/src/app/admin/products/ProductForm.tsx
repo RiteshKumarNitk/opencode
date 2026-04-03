@@ -57,19 +57,20 @@ export default function ProductForm({ productId, onSaved, onCancel }: ProductFor
 
   useEffect(() => {
     if (existing) {
+      const prod = existing as any;
       setForm({
-        name: existing.name || '',
-        description: existing.description || '',
-        shortDesc: existing.shortDesc || '',
-        price: existing.price?.toString() || '',
-        comparePrice: existing.comparePrice?.toString() || '',
-        categoryId: existing.categoryId || '',
-        isActive: existing.isActive ?? true,
-        isFeatured: existing.isFeatured ?? false,
-        images: existing.images || [],
+        name: prod.name || '',
+        description: prod.description || '',
+        shortDesc: prod.shortDesc || '',
+        price: prod.price?.toString() || '',
+        comparePrice: prod.comparePrice?.toString() || '',
+        categoryId: prod.categoryId || '',
+        isActive: prod.isActive ?? true,
+        isFeatured: prod.isFeatured ?? false,
+        images: prod.images || [],
       });
-      if (existing.variants?.length > 0) {
-        setVariants(existing.variants.map((v: any) => ({
+      if (prod.variants?.length > 0) {
+        setVariants(prod.variants.map((v: any) => ({
           name: v.name, sku: v.sku, price: Number(v.price), stock: v.stock, attributes: v.attributes || {},
         })));
       }

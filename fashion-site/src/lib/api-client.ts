@@ -29,11 +29,16 @@ async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<
     requestHeaders['x-session-id'] = sessionId;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const fetchOptions: RequestInit = {
     method,
     headers: requestHeaders,
-    ...(body && { body: JSON.stringify(body) }),
-  });
+  };
+
+  if (body) {
+    fetchOptions.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, fetchOptions);
 
   if (response.status === 401 && auth) {
     const refreshToken = useAuthStore.getState().refreshToken;
@@ -50,11 +55,15 @@ async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<
           useAuthStore.getState().updateTokens(refreshData.data.accessToken);
 
           requestHeaders['Authorization'] = `Bearer ${refreshData.data.accessToken}`;
-          const retryResponse = await fetch(`${API_BASE}${path}`, {
+          const retryFetchOptions: RequestInit = {
             method,
             headers: requestHeaders,
-            ...(body && { body: JSON.stringify(body) }),
-          });
+          };
+          if (body) {
+            retryFetchOptions.body = JSON.stringify(body);
+          }
+
+          const retryResponse = await fetch(`${API_BASE}${path}`, retryFetchOptions);
 
           const retryData = await retryResponse.json();
           if (!retryResponse.ok) {
@@ -137,8 +146,14 @@ export const ordersApi = {
 
   get: (id: string) => apiFetch(`/orders/${id}`),
 
+  getByGuest: (orderNumber: string, email: string) => 
+    apiFetch(`/orders/${orderNumber}?email=${encodeURIComponent(email)}`, { auth: false }),
+
   create: (data: { addressId: string; couponCode?: string; notes?: string; paymentMethod: string }) =>
     apiFetch('/orders', { method: 'POST', body: data }),
+
+  createGuest: (data: { address: any; items: any[]; email: string; phone: string; couponCode?: string }) =>
+    apiFetch('/orders/guest', { method: 'POST', body: data, auth: false }),
 };
 
 export const addressesApi = {
@@ -164,6 +179,30 @@ export const couponsApi = {
   remove: () => apiFetch('/coupons', { method: 'DELETE' }),
 };
 
+export const wishlistApi = {
+  get: () => apiFetch('/wishlist'),
+  add: (productId: string) => apiFetch('/wishlist', { method: 'POST', body: { productId } }),
+  remove: (productId: string) => apiFetch('/wishlist', { method: 'DELETE', body: { productId } }),
+};
+
+export const reviewsApi = {
+  get: (productId: string) => apiFetch(`/reviews/${productId}`, { auth: false }),
+  create: (productId: string, data: { rating: number; title?: string; comment?: string }) =>
+    apiFetch(`/reviews/${productId}`, { method: 'POST', body: data }),
+};
+
+export const profileApi = {
+  update: (data: { firstName: string; lastName: string; phone?: string }) =>
+    apiFetch('/profile', { method: 'PATCH', body: data }),
+};
+
+export const passwordResetApi = {
+  forgot: (email: string) => apiFetch('/auth/forgot-password', { method: 'POST', body: { email }, auth: false }),
+  validate: (token: string) => apiFetch(`/auth/reset-password?token=${token}`, { auth: false }),
+  reset: (token: string, password: string) =>
+    apiFetch('/auth/reset-password', { method: 'POST', body: { token, password }, auth: false }),
+};
+
 export const adminApi = {
   analytics: () => apiFetch('/admin/analytics'),
 
@@ -180,5 +219,12 @@ export const adminApi = {
   products: (params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
     return apiFetch(`/admin/products${query}`);
+  },
+
+  coupons: {
+    list: () => apiFetch('/admin/coupons'),
+    create: (data: Record<string, unknown>) => apiFetch('/admin/coupons', { method: 'POST', body: data }),
+    update: (id: string, data: Record<string, unknown>) => apiFetch(`/admin/coupons/${id}`, { method: 'PATCH', body: data }),
+    delete: (id: string) => apiFetch(`/admin/coupons/${id}`, { method: 'DELETE' }),
   },
 };

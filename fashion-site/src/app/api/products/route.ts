@@ -16,12 +16,18 @@ export async function GET(req: NextRequest) {
       limit: url.searchParams.get('limit') ?? 20,
       search: url.searchParams.get('search') ?? undefined,
       categoryId: url.searchParams.get('categoryId') ?? undefined,
-      minPrice: url.searchParams.get('minPrice') ?? undefined,
-      maxPrice: url.searchParams.get('maxPrice') ?? undefined,
+      minPrice: url.searchParams.get('minPrice') ? Number(url.searchParams.get('minPrice')) : undefined,
+      maxPrice: url.searchParams.get('maxPrice') ? Number(url.searchParams.get('maxPrice')) : undefined,
       isFeatured: url.searchParams.get('isFeatured') ?? undefined,
       isActive: url.searchParams.get('isActive') ?? true,
-      sortBy: url.searchParams.get('sortBy') ?? 'createdAt',
-      sortOrder: url.searchParams.get('sortOrder') ?? 'desc',
+      brand: url.searchParams.get('brand') ?? undefined,
+      size: url.searchParams.get('size') ?? undefined,
+      color: url.searchParams.get('color') ?? undefined,
+      sortBy: url.searchParams.get('sort') === 'price_low' ? 'price' : 
+             url.searchParams.get('sort') === 'price_high' ? 'price' : 
+             url.searchParams.get('sort') === 'popular' ? 'orderCount' : 'createdAt',
+      sortOrder: url.searchParams.get('sort') === 'price_low' ? 'asc' : 
+                 url.searchParams.get('sort') === 'price_high' ? 'desc' : 'desc',
     });
 
     const result = await listProducts(filters);

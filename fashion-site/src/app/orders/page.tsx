@@ -10,7 +10,7 @@ export default function OrdersPage() {
     queryFn: () => ordersApi.list(),
   });
 
-  const orders = data?.data || data || [];
+  const orders = (data as any)?.data || data || [];
 
   const statusConfig: Record<string, { bg: string; text: string; icon: string }> = {
     PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', icon: '⏳' },
