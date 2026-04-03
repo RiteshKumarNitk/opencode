@@ -64,18 +64,30 @@ export function verifyRefreshToken(token: string): JwtPayload | null {
 
 export async function getUserFromRequest(req: NextRequest): Promise<JwtPayload | null> {
   const authHeader = req.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
+  console.log('[Auth] authHeader:', authHeader?.substring(0, 50) + '...');
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.log('[Auth] No Bearer token');
+    return null;
+  }
 
   const token = authHeader.split(' ')[1];
   const payload = verifyToken(token);
-  if (!payload) return null;
+  console.log('[Auth] token payload:', payload);
+  if (!payload) {
+    console.log('[Auth] Invalid token');
+    return null;
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: payload.userId, isActive: true, deletedAt: null },
     select: { id: true, role: true },
   });
 
-  if (!user) return null;
+  console.log('[Auth] DB user:', user);
+  if (!user) {
+    console.log('[Auth] User not found in DB');
+    return null;
+  }
 
   return {
     userId: user.id,

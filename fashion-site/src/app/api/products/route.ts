@@ -46,14 +46,31 @@ export async function POST(req: NextRequest) {
     if (user.role !== 'ADMIN') return forbiddenResponse('Admin access required');
 
     const body = await req.json();
-    const parsed = productSchema.partial().safeParse(body);
+    console.log('Received product data:', JSON.stringify(body, null, 2));
+    
+    // Transform string values to numbers
+    const transformed = {
+      ...body,
+      price: body.price ? Number(body.price) : undefined,
+      comparePrice: body.comparePrice ? Number(body.comparePrice) : undefined,
+      variants: body.variants?.map((v: any) => ({
+        ...v,
+        price: v.price ? Number(v.price) : undefined,
+        comparePrice: v.comparePrice ? Number(v.comparePrice) : undefined,
+        stock: v.stock ? Number(v.stock) : 0,
+      })),
+    };
+    
+    const parsed = productSchema.partial().safeParse(transformed);
     if (!parsed.success) {
+      console.log('Validation errors:', parsed.error.flatten().fieldErrors);
       return validationErrorResponse(parsed.error.flatten().fieldErrors);
     }
 
     const product = await createProduct(parsed.data);
     return createdResponse(product);
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Create product full error:', error);
     if (error instanceof Error) {
       if (error.message === 'SLUG_EXISTS') return errorResponse('A product with this name already exists', 409);
       if (error.message === 'CATEGORY_NOT_FOUND') return errorResponse('Category not found', 404);
@@ -61,7 +78,6 @@ export async function POST(req: NextRequest) {
       if (error.message === 'DESCRIPTION_REQUIRED') return validationErrorResponse({ description: ['Description is required'] });
       if (error.message === 'PRICE_REQUIRED') return validationErrorResponse({ price: ['Price is required'] });
     }
-    console.error('Create product error:', error);
-    return errorResponse('Failed to create product', 500);
+    return errorResponse(error instanceof Error ? error.message : 'Failed to create product', 500);
   }
 }

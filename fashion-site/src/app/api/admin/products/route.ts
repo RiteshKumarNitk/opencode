@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { createProduct, listProducts, updateProduct, deleteProduct, getProduct } from '@/modules/products/service';
 import { productSchema, productFilterSchema } from '@/lib/validations';
 import { getUserFromRequest } from '@/lib/auth';
-import { paginatedResponse, errorResponse, forbiddenResponse, successResponse } from '@/lib/api-response';
+import { paginatedResponse, errorResponse, forbiddenResponse, createdResponse } from '@/lib/api-response';
 
 export async function GET(req: NextRequest) {
   try {
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     const data = productSchema.parse(body);
 
     const product = await createProduct(data);
-    return successResponse(product, 'Product created successfully');
+    return createdResponse(product);
   } catch (error: any) {
     console.error('Admin products POST error:', error);
     if (error.name === 'ZodError') {

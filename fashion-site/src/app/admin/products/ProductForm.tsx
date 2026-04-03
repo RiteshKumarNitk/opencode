@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { productsApi } from '@/lib/api-client';
+import { useAuthStore } from '@/lib/stores';
 
 interface Variant {
   name: string;
@@ -90,10 +91,15 @@ export default function ProductForm({ productId, onSaved, onCancel }: ProductFor
         formData.append('files', files[i]);
       }
 
-      const token = localStorage.getItem('auth-storage');
-      let accessToken = '';
-      if (token) {
-        try { accessToken = JSON.parse(token).state.accessToken; } catch {}
+      const accessToken = useAuthStore.getState().accessToken;
+      const user = useAuthStore.getState().user;
+      console.log('Upload - accessToken:', accessToken ? 'exists' : 'NULL');
+      console.log('Upload - user:', user);
+
+      if (!accessToken) {
+        setError('Not logged in. Please login first.');
+        setUploading(false);
+        return;
       }
 
       const res = await fetch('/api/upload', {
@@ -135,6 +141,26 @@ export default function ProductForm({ productId, onSaved, onCancel }: ProductFor
 
   const removeVariant = (idx: number) => {
     setVariants(vs => vs.filter((_, i) => i !== idx));
+  };
+
+  const fillDemoData = () => {
+    setForm({
+      name: 'Classic Cotton T-Shirt',
+      description: 'A comfortable and versatile cotton t-shirt perfect for everyday wear. Made from 100% organic cotton, this t-shirt features a classic fit with a round neckline. Available in multiple colors.',
+      shortDesc: 'Premium cotton t-shirt',
+      price: '29.99',
+      comparePrice: '39.99',
+      categoryId: categories?.data?.[0]?.id || categories?.[0]?.id || '',
+      isActive: true,
+      isFeatured: true,
+      images: ['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800', 'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=800'],
+    });
+    setVariants([
+      { name: 'S', sku: 'TSHIRT-S', price: 29.99, stock: 50, attributes: { size: 'S' } },
+      { name: 'M', sku: 'TSHIRT-M', price: 29.99, stock: 100, attributes: { size: 'M' } },
+      { name: 'L', sku: 'TSHIRT-L', price: 29.99, stock: 75, attributes: { size: 'L' } },
+      { name: 'XL', sku: 'TSHIRT-XL', price: 29.99, stock: 25, attributes: { size: 'XL' } },
+    ]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -207,6 +233,11 @@ export default function ProductForm({ productId, onSaved, onCancel }: ProductFor
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{isEdit ? 'Edit Product' : 'Add New Product'}</h1>
         <div className="flex gap-3">
+          {!isEdit && (
+            <button type="button" onClick={fillDemoData} className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              Fill Demo Data
+            </button>
+          )}
           <button type="button" onClick={onCancel} className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
           <button type="submit" disabled={saving} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold hover:shadow-lg transition disabled:opacity-50">
             {saving ? 'Saving...' : isEdit ? 'Update Product' : 'Create Product'}
