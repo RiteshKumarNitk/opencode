@@ -28,12 +28,16 @@ export default function AdminDashboard() {
   const o = analyticsData?.overview || {};
   const recentOrders = analyticsData?.recentOrders || [];
   const lowStock = analyticsData?.lowStockVariants || [];
+  const recentReviews = analyticsData?.recentReviews || [];
+  const wishlistCount = analyticsData?.wishlistCount || 0;
+  const categoryBreakdown = analyticsData?.categoryBreakdown || [];
+  const revenueGrowth = o.revenueGrowth || 0;
 
   const stats = [
-    { label: 'Total Revenue', value: `₹${Number(o.totalRevenue || 0).toLocaleString()}`, sub: '+12% from last month', icon: '💰', color: 'from-emerald-500 to-green-600', bg: 'bg-emerald-50' },
+    { label: 'Total Revenue', value: `₹${Number(o.totalRevenue || 0).toLocaleString()}`, sub: `${revenueGrowth}% from last month`, icon: '💰', color: 'from-emerald-500 to-green-600', bg: 'bg-emerald-50' },
     { label: 'Total Orders', value: o.totalOrders || 0, sub: `${o.pendingOrders || 0} pending`, icon: '📦', color: 'from-blue-500 to-indigo-600', bg: 'bg-blue-50' },
     { label: 'Products', value: o.totalProducts || 0, sub: 'Active listings', icon: '👗', color: 'from-purple-500 to-violet-600', bg: 'bg-purple-50' },
-    { label: 'Customers', value: o.totalCustomers || 0, sub: '+5% new', icon: '👥', color: 'from-amber-500 to-orange-600', bg: 'bg-amber-50' },
+    { label: 'Wishlists', value: wishlistCount, sub: 'Items saved', icon: '❤️', color: 'from-pink-500 to-rose-600', bg: 'bg-pink-50' },
   ];
 
   const salesData = [
@@ -45,6 +49,14 @@ export default function AdminDashboard() {
     { month: 'Jun', sales: 67000 },
   ];
 
+  const defaultCategories = [
+    { name: 'Women', percent: 45, color: 'bg-pink-500' },
+    { name: 'Men', percent: 30, color: 'bg-blue-500' },
+    { name: 'Kids', percent: 15, color: 'bg-yellow-500' },
+    { name: 'Home', percent: 10, color: 'bg-green-500' },
+  ];
+
+  const displayCategories = categoryBreakdown.length > 0 ? categoryBreakdown : defaultCategories;
   const maxSales = Math.max(...salesData.map(d => d.sales));
 
   return (
@@ -113,19 +125,14 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
           <h2 className="font-bold text-gray-900 mb-6">Category Sales</h2>
           <div className="space-y-4">
-            {[
-              { name: 'Women', percent: 45, color: 'bg-pink-500' },
-              { name: 'Men', percent: 30, color: 'bg-blue-500' },
-              { name: 'Kids', percent: 15, color: 'bg-yellow-500' },
-              { name: 'Home', percent: 10, color: 'bg-green-500' },
-            ].map((cat) => (
+            {displayCategories.map((cat: any) => (
               <div key={cat.name}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-gray-600">{cat.name}</span>
                   <span className="font-medium">{cat.percent}%</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-full ${cat.color} rounded-full`} style={{ width: `${cat.percent}%` }} />
+                  <div className={`h-full ${cat.color || 'bg-indigo-500'} rounded-full`} style={{ width: `${cat.percent}%` }} />
                 </div>
               </div>
             ))}

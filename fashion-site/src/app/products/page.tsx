@@ -1,7 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { productsApi } from '@/lib/api-client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { productsApi, wishlistApi } from '@/lib/api-client';
+import { useAuthStore } from '@/lib/stores';
 import Link from 'next/link';
 import { useState, useMemo } from 'react';
 import { useDebounce } from '@/lib/hooks';
@@ -307,7 +308,34 @@ export default function ProductsPage() {
 }
 
 function ProductCard({ product, index }: { product: any; index: number }) {
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { isAuthenticated } = useAuthStore();
+  const queryClient = useQueryClient();
+
+  const { data: wishlist } = useQuery({
+    queryKey: ['wishlist'],
+    queryFn: () => wishlistApi.get(),
+    enabled: isAuthenticated,
+  });
+
+  const wishlistItems = Array.isArray(wishlist) ? wishlist : [];
+  const isInWishlist = wishlistItems.some((item: any) => item.productId === product.id);
+
+  const wishlistMutation = useMutation({
+    mutationFn: () => isInWishlist ? wishlistApi.remove(product.id) : wishlistApi.add(product.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
+    },
+  });
+
+  const handleWishlistClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      window.location.href = '/login';
+      return;
+    }
+    wishlistMutation.mutate();
+  };
 
   return (
     <Link
@@ -335,10 +363,10 @@ function ProductCard({ product, index }: { product: any; index: number }) {
           </span>
         )}
         <button
-          onClick={(e) => { e.preventDefault(); setIsWishlisted(!isWishlisted); }}
+          onClick={handleWishlistClick}
           className="absolute top-3 right-3 p-2 rounded-full bg-white shadow-md hover:bg-gray-50 transition"
         >
-          <svg className={`w-4 h-4 ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} fill={isWishlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`w-4 h-4 ${isInWishlist ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} fill={isInWishlist ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
         </button>

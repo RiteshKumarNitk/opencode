@@ -46,3 +46,57 @@ export async function isInWishlist(userId: string, productId: string) {
   });
   return !!item;
 }
+
+// Admin functions
+
+export async function getWishlistAnalytics() {
+  const [popularProducts, recentActivity, userStats] = await Promise.all([
+    prisma.wishlistItem.groupBy({
+      by: ['productId'],
+      _count: { productId: true },
+      orderBy: { _count: { productId: 'desc' } },
+      take: 10,
+    }),
+    prisma.wishlistItem.findMany({
+      take: 20,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        product: { select: { id: true, name: true, slug: true, images: true } },
+      },
+    }),
+    prisma.user.findMany({
+      where: {
+        wishlistItems: { some: {} },
+      },
+      select: { id: true, firstName: true, lastName: true, email: true, _count: { select: { wishlistItems: true } } },
+      orderBy: { wishlistItems: { _count: 'desc' } },
+      take: 10,
+    }),
+  ]);
+
+  const totalWishlistItems = await prisma.wishlistItem.count();
+  const totalUsersWithWishlists = await prisma.user.count({
+    where: { wishlistItems: { some: {} } },
+  });
+
+  const productDetails = await Promise.all(
+    popularProducts.map(async (p) => {
+      const product = await prisma.product.findUnique({
+        where: { id: p.productId },
+        select: { id: true, name: true, slug: true, images: true, price: true },
+      });
+      return { ...product, wishlistCount: p._count.productId };
+    })
+  );
+
+  return {
+    popularProducts: productDetails.filter((p) => p !== null),
+    recentActivity,
+    topUsers: userStats,
+    stats: {
+      totalWishlistItems,
+      totalUsersWithWishlists,
+    },
+  };
+}

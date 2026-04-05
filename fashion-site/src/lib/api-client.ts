@@ -227,4 +227,26 @@ export const adminApi = {
     update: (id: string, data: Record<string, unknown>) => apiFetch(`/admin/coupons/${id}`, { method: 'PATCH', body: data }),
     delete: (id: string) => apiFetch(`/admin/coupons/${id}`, { method: 'DELETE' }),
   },
+
+  reviews: {
+    list: (params?: Record<string, string>) => {
+      const query = params ? '?' + new URLSearchParams(params).toString() : '';
+      return apiFetch(`/admin/reviews${query}`);
+    },
+    toggle: (id: string, isActive: boolean) => apiFetch(`/admin/reviews/${id}`, { method: 'PATCH', body: { isActive } }),
+    delete: (id: string) => apiFetch(`/admin/reviews/${id}`, { method: 'DELETE' }),
+  },
+
+  wishlist: {
+    list: (params?: Record<string, string>) => {
+      const query = params ? '?' + new URLSearchParams(params).toString() : '';
+      return apiFetch(`/admin/wishlist${query}`);
+    },
+    stats: () => apiFetch('/admin/wishlist/stats'),
+  },
+
+  stockAlerts: {
+    list: () => apiFetch('/admin/stock-alerts'),
+    delete: (id: string) => apiFetch(`/admin/stock-alerts/${id}`, { method: 'DELETE' }),
+  },
 };

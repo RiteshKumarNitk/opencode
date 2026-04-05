@@ -91,3 +91,39 @@ export async function deleteReview(userId: string, reviewId: string) {
 
   await prisma.review.delete({ where: { id: reviewId } });
 }
+
+// Admin functions
+
+export async function getAllReviews(params?: { productId?: string; isActive?: boolean }) {
+  const where: any = {};
+  if (params?.productId) where.productId = params.productId;
+  if (params?.isActive !== undefined) where.isActive = params.isActive;
+
+  const reviews = await prisma.review.findMany({
+    where,
+    include: {
+      user: { select: { id: true, firstName: true, lastName: true, email: true } },
+      product: { select: { id: true, name: true, slug: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const stats = await prisma.review.aggregate({
+    where: { isActive: true },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+
+  return { reviews, stats: { avgRating: stats._avg.rating || 0, totalReviews: stats._count.rating } };
+}
+
+export async function toggleReviewActive(reviewId: string, isActive: boolean) {
+  return prisma.review.update({
+    where: { id: reviewId },
+    data: { isActive },
+  });
+}
+
+export async function deleteReviewAdmin(reviewId: string) {
+  return prisma.review.delete({ where: { id: reviewId } });
+}
