@@ -36,6 +36,19 @@ export async function listProducts(filters: ProductFilterInput) {
     };
   }
 
+  if (filters.flashSale) {
+    const now = new Date();
+    where.flashSaleProducts = {
+      some: {
+        flashSale: {
+          isActive: true,
+          startsAt: { lte: now },
+          endsAt: { gte: now },
+        },
+      },
+    };
+  }
+
   const sortMapping: Record<string, { [key: string]: string }> = {
     createdAt: { createdAt: filters.sortOrder || 'desc' },
     price: { price: filters.sortOrder || 'desc' },

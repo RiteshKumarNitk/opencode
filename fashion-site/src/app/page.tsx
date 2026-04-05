@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 
 export default function HomePage() {
   const { data: categories } = useQuery({
@@ -14,8 +15,29 @@ export default function HomePage() {
     queryFn: () => fetch('/api/products?isFeatured=true&limit=16').then(r => r.json()),
   });
 
+  const { data: banners } = useQuery({
+    queryKey: ['home-banners'],
+    queryFn: () => fetch('/api/banners?position=home').then(r => r.json()).then(d => Array.isArray(d) ? d : []),
+  });
+
+  const { data: flashSales } = useQuery({
+    queryKey: ['flash-sales-active'],
+    queryFn: () => fetch('/api/flash-sales-active').then(r => r.json()).then(d => Array.isArray(d) ? d : []),
+  });
+
   const featured = featuredData?.data || featuredData || [];
   const cats = categories || [];
+
+  const [currentBanner, setCurrentBanner] = useState(0);
+
+  useEffect(() => {
+    if (banners && banners.length > 1) {
+      const timer = setInterval(() => {
+        setCurrentBanner((prev) => (prev + 1) % banners.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [banners]);
 
   const categoryImages = [
     { name: 'Men', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop', slug: 'men' },
@@ -35,15 +57,56 @@ export default function HomePage() {
       {/* Hero Slider */}
       <section className="relative bg-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link href="/products">
-            <img 
-              src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1400&h=400&fit=crop" 
-              alt="Banner" 
-              className="w-full h-48 md:h-64 object-cover rounded-xl cursor-pointer"
-            />
-          </Link>
+          {banners && banners.length > 0 ? (
+            <div className="relative">
+              <Link href={banners[currentBanner]?.link || '/products'}>
+                <img 
+                  src={banners[currentBanner]?.image || 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1400&h=400&fit=crop'} 
+                  alt={banners[currentBanner]?.title || 'Banner'} 
+                  className="w-full h-48 md:h-64 object-cover rounded-xl cursor-pointer"
+                />
+              </Link>
+              {banners.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                  {banners.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentBanner(i)}
+                      className={`w-2 h-2 rounded-full ${i === currentBanner ? 'bg-[#ff3f6c]' : 'bg-white/70'}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link href="/products">
+              <img 
+                src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1400&h=400&fit=crop" 
+                alt="Banner" 
+                className="w-full h-48 md:h-64 object-cover rounded-xl cursor-pointer"
+              />
+            </Link>
+          )}
         </div>
       </section>
+
+      {/* Flash Sales Banner */}
+      {flashSales && flashSales.length > 0 && (
+        <section className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-4">
+          <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="text-2xl">⚡</span>
+              <div>
+                <h3 className="font-bold text-lg">Flash Sale Live!</h3>
+                <p className="text-sm opacity-90">{flashSales[0].name} - Up to {flashSales[0].discount}% OFF</p>
+              </div>
+            </div>
+            <Link href="/products?flashSale=true" className="px-4 py-2 bg-white text-orange-600 rounded-lg font-medium hover:bg-orange-50">
+              Shop Now
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* Category Cards */}
       <section className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">

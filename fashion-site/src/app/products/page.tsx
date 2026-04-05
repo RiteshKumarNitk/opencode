@@ -4,8 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsApi, wishlistApi } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores';
 import Link from 'next/link';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useDebounce } from '@/lib/hooks';
+import { useSearchParams } from 'next/navigation';
 
 interface FilterState {
   search: string;
@@ -16,9 +17,11 @@ interface FilterState {
   size: string;
   color: string;
   sort: string;
+  flashSale?: boolean;
 }
 
 export default function ProductsPage() {
+  const searchParams = useSearchParams();
   const [filters, setFilters] = useState<FilterState>({
     search: '',
     category: '',
@@ -33,6 +36,27 @@ export default function ProductsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const debouncedSearch = useDebounce(filters.search, 500);
 
+  useEffect(() => {
+    const category = searchParams.get('category');
+    const brand = searchParams.get('brand');
+    const search = searchParams.get('search') || '';
+    const flashSale = searchParams.get('flashSale');
+    const sort = searchParams.get('sort') || 'newest';
+    
+    setFilters(prev => ({
+      ...prev,
+      category: category || prev.category,
+      brand: brand || prev.brand,
+      search: search || prev.search,
+      sort: sort || prev.sort,
+    }));
+    
+    // Also set flashSale filter
+    if (flashSale === 'true' || flashSale === 'false') {
+      setFilters(prev => ({ ...prev, flashSale: flashSale === 'true' }));
+    }
+  }, [searchParams]);
+
   const { data, isLoading } = useQuery({
     queryKey: ['products', debouncedSearch, page, filters],
     queryFn: () => {
@@ -42,10 +66,13 @@ export default function ProductsPage() {
         sort: filters.sort,
       };
       if (debouncedSearch) params.search = debouncedSearch;
-      if (filters.category) params.category = filters.category;
+      if (filters.category) params.categoryId = filters.category;
       if (filters.minPrice > 0) params.minPrice = filters.minPrice.toString();
       if (filters.maxPrice < 10000) params.maxPrice = filters.maxPrice.toString();
       if (filters.brand) params.brand = filters.brand;
+      if (filters.size) params.size = filters.size;
+      if (filters.color) params.color = filters.color;
+      if ((filters as any).flashSale) params.flashSale = 'true';
       return productsApi.list(params);
     },
   });

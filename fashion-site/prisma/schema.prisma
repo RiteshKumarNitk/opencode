@@ -68,6 +68,8 @@ model User {
   reviews       Review[]
   resetTokens   PasswordResetToken[]
   socialAccounts SocialAccount[]
+  auditLogs     AuditLog[]
+  adminUsers    AdminUser[]
 
   @@index([email])
   @@index([role])
@@ -130,6 +132,8 @@ model Product {
   cartItems     CartItem[]
   wishlistItems WishlistItem[]
   reviews       Review[]
+  flashSaleProducts FlashSaleProduct[]
+  bundleProducts    BundleProduct[]
 
   @@index([categoryId])
   @@index([isActive])
@@ -255,6 +259,7 @@ model Order {
   address         Address      @relation(fields: [addressId], references: [id])
 
   shipment        Shipment?
+  returnRequests ReturnRequest[]
 
   @@index([userId])
   @@index([orderNumber])
@@ -874,4 +879,87 @@ model AnalyticsEvent {
 
     @@index([roleId])
     @@map("admin_users")
+  }
+
+  // ─────────────────────────────────────────────
+  // PUSH NOTIFICATIONS
+  // ─────────────────────────────────────────────
+
+  model PushSubscription {
+    id        String   @id @default(cuid())
+    userId    String
+    endpoint  String   @unique
+    p256dh    String
+    auth      String
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+    @@map("push_subscriptions")
+  }
+
+  // ─────────────────────────────────────────────
+  // LOYALTY REWARDS
+  // ─────────────────────────────────────────────
+
+  model LoyaltyPoints {
+    id          String   @id @default(cuid())
+    userId      String   @unique
+    points      Int      @default(0)
+    lifetime    Int      @default(0)
+    updatedAt   DateTime @updatedAt
+    createdAt   DateTime @default(now())
+
+    user        User     @relation(fields: [userId], references: [id])
+
+    @@index([userId])
+    @@map("loyalty_points")
+  }
+
+  model LoyaltyTransaction {
+    id          String   @id @default(cuid())
+    type        String   // "earn", "redeem", "expire", "adjust"
+    points      Int
+    balance     Int
+    description String?
+    orderId     String?
+    expiresAt   DateTime?
+    createdAt   DateTime @default(now())
+
+    userId      String
+    user        User     @relation(fields: [userId], references: [id])
+
+    @@index([userId])
+    @@index([orderId])
+    @@map("loyalty_transactions")
+  }
+
+  model LoyaltyTier {
+    id          String   @id @default(cuid())
+    name        String   @unique // "Bronze", "Silver", "Gold", "Platinum"
+    minPoints   Int
+    discount    Decimal  @db.Decimal(5, 2) // Percentage discount
+    perks       String[] // ["free_shipping", "early_access"]
+    createdAt   DateTime @default(now())
+
+    @@map("loyalty_tiers")
+  }
+
+  // ─────────────────────────────────────────────
+  // PRODUCT VIEWS (for recommendations)
+  // ─────────────────────────────────────────────
+
+  model ProductView {
+    id          String   @id @default(cuid())
+    userId      String?
+    sessionId   String?
+    productId   String
+    source      String?  // "search", "category", "recommendation", "direct"
+    createdAt   DateTime @default(now())
+
+    product     Product  @relation(fields: [productId], references: [id])
+
+    @@index([productId])
+    @@index([userId, createdAt])
+    @@index([sessionId])
+    @@map("product_views")
   }

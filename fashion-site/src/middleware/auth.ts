@@ -5,6 +5,10 @@ const protectedPaths = [
   '/api/orders',
   '/api/addresses',
   '/api/auth/me',
+  '/api/wishlist',
+  '/api/cart',
+  '/api/profile',
+  '/api/returns',
   '/api/admin',
 ];
 
@@ -15,6 +19,12 @@ export function middleware(req: NextRequest) {
 
   const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
   const isAdmin = adminPaths.some((path) => pathname.startsWith(path));
+
+  // Skip auth check for public API routes
+  const publicPaths = ['/api/products', '/api/categories', '/api/blog', '/api/coupons', '/api/banners', '/api/flash-sales-active', '/api/track-order', '/api/newsletter', '/api/stock-alert', '/api/auth/login', '/api/auth/register', '/api/auth/forgot-password', '/api/auth/reset-password', '/api/auth/refresh', '/api/reviews', '/api/auth/google', '/api/auth/facebook', '/api/upload', '/api/payments'];
+  const isPublic = publicPaths.some((path) => pathname.startsWith(path));
+  
+  if (isPublic && !isAdmin) return NextResponse.next();
 
   if (!isProtected) return NextResponse.next();
 

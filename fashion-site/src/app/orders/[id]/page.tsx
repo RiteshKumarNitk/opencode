@@ -276,6 +276,38 @@ export default function OrderDetailPage() {
               </div>
             </div>
           )}
+
+          {/* Return Button for Delivered Orders */}
+          {orderData.status === 'DELIVERED' && (
+            <div className="bg-white rounded-2xl border border-gray-100 p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-3">Need to Return?</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                If you're not satisfied with your order, you can initiate a return request.
+              </p>
+              <button 
+                onClick={() => {
+                  const reason = prompt('Please enter the reason for return:');
+                  if (reason) {
+                    fetch('/api/returns', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ orderId: orderData.id, reason }),
+                    }).then(r => {
+                      if (r.ok) {
+                        alert('Return request submitted successfully!');
+                        window.location.reload();
+                      } else {
+                        alert('Failed to submit return request');
+                      }
+                    });
+                  }
+                }}
+                className="px-4 py-2 bg-[#ff3f6c] text-white rounded-lg font-medium hover:bg-red-600"
+              >
+                Request Return
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
