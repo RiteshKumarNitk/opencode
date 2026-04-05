@@ -1,11 +1,13 @@
 {
-  "name": "FashionStore",
+  "name": "Fashion Store",
   "short_name": "FashionStore",
-  "description": "Premium Fashion E-Commerce",
+  "description": "Your favorite fashion shopping destination",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8fafc",
-  "theme_color": "#4f46e5",
+  "theme_color": "#ff3f6c",
+  "orientation": "portrait-primary",
+  "categories": ["shopping", "fashion"],
   "icons": [
     {
       "src": "/icons/icon-72.png",
@@ -48,6 +50,23 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Shop Products",
+      "url": "/products",
+      "icons": [{"src": "/icons/icon-96.png", "sizes": "96x96"}]
+    },
+    {
+      "name": "My Orders",
+      "url": "/orders",
+      "icons": [{"src": "/icons/icon-96.png", "sizes": "96x96"}]
+    },
+    {
+      "name": "Cart",
+      "url": "/cart",
+      "icons": [{"src": "/icons/icon-96.png", "sizes": "96x96"}]
     }
   ]
 }
