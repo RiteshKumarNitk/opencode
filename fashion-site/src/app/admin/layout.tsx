@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: 'grid' },
+  { href: '/admin/analytics', label: 'Analytics', icon: 'chart-line' },
   { href: '/admin/products', label: 'Products', icon: 'package' },
   { href: '/admin/categories', label: 'Categories', icon: 'layers' },
   { href: '/admin/orders', label: 'Orders', icon: 'shopping-bag' },
@@ -23,6 +24,7 @@ const navItems = [
   { href: '/admin/returns', label: 'Returns', icon: 'rotate-ccw' },
   { href: '/admin/inventory', label: 'Inventory', icon: 'archive' },
   { href: '/admin/reports', label: 'Reports', icon: 'bar-chart' },
+  { href: '/admin/vendors', label: 'Vendors', icon: 'store' },
   { href: '/admin/subscribers', label: 'Subscribers', icon: 'mail' },
   { href: '/admin/blog', label: 'Blog', icon: 'file-text' },
   { href: '/admin/audit-logs', label: 'Audit Logs', icon: 'clipboard' },

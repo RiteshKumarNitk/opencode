@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { QueryProvider } from '@/components/QueryProvider';
+import { TranslationProvider } from '@/components/TranslationProvider';
 import { Navbar } from '@/components/Navbar';
 import ChatWidget from '@/components/ChatWidget';
 import CompareBar from '@/components/CompareBar';
@@ -38,10 +39,12 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} bg-[#f8fafc] antialiased`}>
         <QueryProvider>
-          <Navbar />
-          <main className="min-h-[calc(100vh-64px)] pb-16">{children}</main>
-          <CompareBar />
-          <ChatWidget />
+          <TranslationProvider>
+            <Navbar />
+            <main className="min-h-[calc(100vh-64px)] pb-16">{children}</main>
+            <CompareBar />
+            <ChatWidget />
+          </TranslationProvider>
         </QueryProvider>
       </body>
     </html>

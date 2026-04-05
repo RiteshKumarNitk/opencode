@@ -206,6 +206,22 @@ export function Navbar() {
                         Admin Panel
                       </Link>
                     )}
+                    {(user?.role === 'VENDOR' || user?.role === 'ADMIN') && (
+                      <Link
+                        href="/vendor/dashboard"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                      >
+                        Vendor Dashboard
+                      </Link>
+                    )}
+                    <Link
+                      href="/become-vendor"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      Become a Vendor
+                    </Link>
                     <hr className="my-1" />
                     <button
                       onClick={handleLogout}
